@@ -220,7 +220,7 @@ def makeAImove(boardstate, height, width):
                     free = target=='-'
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('r'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('q'), y, x, newY, newX))
                     newY -= 1
 
                 #Down
@@ -233,7 +233,7 @@ def makeAImove(boardstate, height, width):
                     free = target=='-'
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('r'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('q'), y, x, newY, newX))
                     newY +=1
 
                 #Left
@@ -246,7 +246,7 @@ def makeAImove(boardstate, height, width):
                     free = target=='-'
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('r'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('q'), y, x, newY, newX))
                     newX -= 1
                 
                 #Right
@@ -259,7 +259,7 @@ def makeAImove(boardstate, height, width):
                     free = target=='-'
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('r'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('q'), y, x, newY, newX))
                     newX += 1
                 
                 #Up-left
