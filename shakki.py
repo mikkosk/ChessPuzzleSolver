@@ -7,18 +7,19 @@ import sys
 
 
 class Board:
-    def __init__(self, boardstate, history):
+    def __init__(self, boardstate, history, points):
         self.boardstate = boardstate
         self.height = len(boardstate)
         self.width = len(boardstate[0])
         self.history = history
+        self.points = points
     
     def __str__(self):
         st = ""
         for row in range(self.height):
             st = st + "".join(self.boardstate[row]) + "\n"
         st = st + "Moves: " + str(len(self.history)) + "\n"
-        st = st + "Points: " + "not implemented" + "\n"
+        st = st + "Points: " + str(self.points) + "\n"
         return st
     
     def win(self):
@@ -39,7 +40,6 @@ class Board:
         return
 
 def makeAImove(boardstate, height, width):
-    pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k'), (1, 3, 4, 5, 9, 100000)))
     #Find all moves for AI and select the best one. If no moves, return the original.
     possibleMoves = list()
     for x in range(width):
@@ -55,7 +55,7 @@ def makeAImove(boardstate, height, width):
                     target = boardstate[newY][newX]
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((1/pointsmap.get(target), pointsmap.get('p'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('p'), y, x, newY, newX))
 
                 #One right-Down
                 newX = x+1
@@ -65,7 +65,7 @@ def makeAImove(boardstate, height, width):
                     target = boardstate[newY][newX]
                     #Is there something to eat?
                     if(target.islower()):
-                        possibleMoves.append((1/pointsmap.get(target), pointsmap.get('p'), y, x, newY, newX))
+                        possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('p'), y, x, newY, newX))
   
             #Check knight
             if(boardstate[y][x]=='H'):
@@ -79,7 +79,7 @@ def makeAImove(boardstate, height, width):
                         target = boardstate[newY][newX]
                         #Is there something to eat?
                         if(target.islower()):
-                            possibleMoves.append((1/pointsmap.get(target), pointsmap.get('h'), y, x, newY, newX))
+                            possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('h'), y, x, newY, newX))
 
             #Check king
             if(boardstate[y][x]=='K'):
@@ -331,7 +331,6 @@ def makeAImove(boardstate, height, width):
         return newBoardstate
 
 def checkMoves(board):
-    pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k'), (1, 3, 4, 5, 9, 100000)))
     possibleBoardstates = list()
     #Create every possible boardstate after a player move
     for x in range(board.width):
@@ -523,21 +522,25 @@ def checkMoves(board):
 
             for move in possibleMoves:
                 newY, newX = move
+                #Add points player eats something else than king
+                if(board.boardstate[newY][newX]!='K'):
+                    newPoints = board.points + pointsmap.get(board.boardstate[newY][newX].lower())
+                
                 newState = copy.deepcopy(board.boardstate)
                 newState[y][x] = '-'
                 newState[newY][newX] = board.boardstate[y][x]
-                possibleBoardstates.append(newState)
+                possibleBoardstates.append((newState, newPoints))
 
     #Check AI for each boardstate
-    finalBoardstates = [makeAImove(state, board.height, board.width) for state in possibleBoardstates]
+    finalBoardstates = [(makeAImove(state, board.height, board.width), newPoints) for (state, newPoints) in possibleBoardstates]
 
     #Transform possibleBoardstates into a list of boards and remove any with repeated moves
     history = copy.deepcopy(board.history)
 
     history.append(board.boardstate)
-    finalBoardstates = filter(lambda state: not state in history, finalBoardstates)
+    finalBoardstates = filter(lambda state: not state[0] in history, finalBoardstates)
 
-    return list(Board(state, history) for state in finalBoardstates)
+    return list(Board(state, history, newPoints) for (state, newPoints) in finalBoardstates)
 
 #Maptext should be something like:
 maptext_example = """RHBQKBHR
@@ -550,6 +553,7 @@ p-------
 rhbqkbhr
 """
 
+pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k', '-'), (1, 3, 4, 5, 9, 100000, 0)))
 #Filename is name for output file
 
 def calculate_solutions(maptext, filename):
@@ -562,7 +566,7 @@ def calculate_solutions(maptext, filename):
     board = [[maplist[y][x] for x in range(width)] for y in range(height)]
     history = list()
 
-    start = Board(board, history)
+    start = Board(board, history, 0)
 
     queue = list()
     visited = set()
