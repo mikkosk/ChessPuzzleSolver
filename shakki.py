@@ -1,9 +1,8 @@
 import copy
 from operator import itemgetter
-import os.path
 from os import path
+from os import listdir
 import sys
-
 
 
 class Board:
@@ -483,12 +482,12 @@ def checkMoves(board):
                     newX += 1
 
             #Check knight
-            if(board.boardstate[y][x]=='n'):
+            if(board.boardstate[y][x]=='h'):
                 changes = ((-1, -2), (1, -2), (-1, 2), (1, 2), (-2, -1), (2, -1), (-2, 1), (2, 1))
                 for change in changes:
                     newX = x + change[0]
                     newY = y + change[1]
-                    while(newX>=0 and newY>=0 and newX<board.width and newY<board.height and (board.boardstate[newY][newX]=='-'or board.boardstate[newY][newX].isupper())):
+                    if(newX>=0 and newY>=0 and newX<board.width and newY<board.height and (board.boardstate[newY][newX]=='-'or board.boardstate[newY][newX].isupper())):
                         possibleMoves.append((newY, newX))
             
             #Check king
@@ -525,7 +524,7 @@ def checkMoves(board):
                 #Add points player eats something else than king
                 if(board.boardstate[newY][newX]!='K'):
                     newPoints = board.points + pointsmap.get(board.boardstate[newY][newX].lower())
-                
+                newPoints = 0 #Fix later
                 newState = copy.deepcopy(board.boardstate)
                 newState[y][x] = '-'
                 newState[newY][newX] = board.boardstate[y][x]
@@ -556,7 +555,7 @@ rhbqkbhr
 pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k', '-'), (1, 3, 4, 5, 9, 100000, 0)))
 #Filename is name for output file
 
-def calculate_solutions(maptext, filename):
+def calculate_solutions(maptext, filename, verbose = True):
     #Initialize variables
 
     maplist = maptext.split("\n")
@@ -601,7 +600,6 @@ def calculate_solutions(maptext, filename):
             turns += 1
 
         for b in li:
-            
             if b.win() and not str(b.boardstate) in winset:
                 wins.append(b)
                 visited.add(str(b.boardstate))
@@ -617,17 +615,18 @@ def calculate_solutions(maptext, filename):
 
 #Calling for .map files from console
 if __name__ == "__main__":
-
+    
     if len(sys.argv)<2:
         print("Not enough given parameters! (Needs input_filename, output_filename)")
         sys.exit()
     file_in = sys.argv[1]
+    
     if not path.exists(file_in):
         print("No input file found with given path:", file_in)
         sys.exit()
 
     file_out = sys.argv[2]
-
+    
     maptext = ""
     with open(file_in, "r") as f:
         for line in f:
