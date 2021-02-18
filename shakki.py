@@ -2,6 +2,7 @@ import copy
 from operator import itemgetter
 from os import path
 from os import listdir
+import random
 import sys
 
 
@@ -25,6 +26,13 @@ class Board:
         king = False
         for row in range(self.height):
             king = king or 'K' in self.boardstate[row]
+        if not king:
+            finalScore = 0
+            pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k', '-'), (1, 3, 4, 5, 9, 100000, 0)))
+            for row in self.boardstate:
+                for elem in row:
+                    finalScore = finalScore + pointsmap.get(elem, 0)
+            self.points = finalScore
         return not king
     
     def print_to_file(self, pos, filename):
@@ -37,6 +45,22 @@ class Board:
                 print(st, file=text_file)
             print(self, file=text_file)
         return
+
+def print_level(maptext, filename, points, moves):
+    with open(filename, "w") as text_file:
+        last_char = ""
+        for char in maptext:
+            if(last_char != ""):
+                print(last_char, file=text_file, end="")
+                if(char != "\n" and last_char != "\n"):
+                    print(" ", file=text_file, end="")
+            last_char = char
+        print("", file=text_file)
+        print("#", file=text_file)
+        print(points, file=text_file, end=" ")
+        print(moves, file=text_file, end="")
+    return
+                
 
 def makeAImove(boardstate, height, width):
     #Find all moves for AI and select the best one. If no moves, return the original.
@@ -316,8 +340,15 @@ def makeAImove(boardstate, height, width):
                         possibleMoves.append((-1*pointsmap.get(target), pointsmap.get('q'), y, x, newY, newX))
                     newY += 1
                     newX += 1
-    #If no moves, return original
-    if(len(possibleMoves)==0):
+    #If no moves or player, return original
+    def checkWin(bs):
+        for row in bs:
+            for elem in row:
+                if (elem == 'K'):
+                    return False         
+        return True
+
+    if(len(possibleMoves)==0 or checkWin(boardstate)):
         return boardstate
     else:
         #Sort by target value, then eating piece value, then by x-coordinate, first target and then eating piece (pick leftmost) 
@@ -555,9 +586,11 @@ rhbqkbhr
 pointsmap = dict(zip(('p', 'h', 'b', 'r', 'q', 'k', '-'), (1, 3, 4, 5, 9, 100000, 0)))
 #Filename is name for output file
 
-def calculate_solutions(maptext, filename, verbose = True):
+def calculate_solutions(maptext, filename, target = False, verbose = True):
     #Initialize variables
 
+    best_moves = -1
+    best_points = 0
     maplist = maptext.split("\n")
     width = len(maplist[0])
     height = len(maplist) - 1
@@ -601,10 +634,18 @@ def calculate_solutions(maptext, filename, verbose = True):
 
         for b in li:
             if b.win() and not str(b.boardstate) in winset:
+                if(best_moves == -1 or best_moves >= len(b.history)):
+                    best_moves = len(b.history)
+                    if(best_points < b.points):
+                        best_points = b.points
                 wins.append(b)
                 visited.add(str(b.boardstate))
                 winset.add(str(b.boardstate))
                 print("Wins found:", len(wins))
+                print("Best moves: ", best_moves)
+                print("Best points: ", best_points)
+                if(target and best_moves < target):
+                    return -1, -1
                 b.print_to_file(len(wins), filename)
                 continue
 
@@ -612,25 +653,68 @@ def calculate_solutions(maptext, filename, verbose = True):
                 queue.append(b)
                 visited.add(str(b.boardstate))
 
+    return best_moves, best_points
 
 #Calling for .map files from console
 if __name__ == "__main__":
     
-    if len(sys.argv)<2:
-        print("Not enough given parameters! (Needs input_filename, output_filename)")
+    if len(sys.argv)<3:
+        print("Not enough given parameters! (Needs mode, input_filename, output_filename)")
         sys.exit()
-    file_in = sys.argv[1]
-    
-    if not path.exists(file_in):
-        print("No input file found with given path:", file_in)
-        sys.exit()
+    mode = sys.argv[1]
+    if(mode == "solve"):
+        file_in = sys.argv[2]
+        
+        if not path.exists(file_in):
+            print("No input file found with given path:", file_in)
+            sys.exit()
 
-    file_out = sys.argv[2]
-    
-    maptext = ""
-    with open(file_in, "r") as f:
-        for line in f:
-            if line[0]=='#':
-                break
-            maptext += line.replace(" ", "")
-    calculate_solutions(maptext, file_out)
+        file_out = sys.argv[3]
+        
+        maptext = ""
+        with open(file_in, "r") as f:
+            for line in f:
+                if line[0]=='#':
+                    break
+                maptext += line.replace(" ", "")
+        calculate_solutions(maptext, file_out)
+
+    elif(mode == "create"):
+        print("LOL")
+        if len(sys.argv)<5:
+            print("Not enough given parameters! (Needs mode, size, pieces_amount, moves, output_filename)")
+            sys.exit()
+        size = int(sys.argv[2])
+        pieces_amount = int(sys.argv[3])
+        moves = int(sys.argv[4])
+        file_out = (sys.argv[5])
+
+        if(pieces_amount > size * size):
+            pieces_amount = size * size
+        
+        successful = False
+
+        while not successful:
+            pieces = pieces_amount - 1
+            possible_pieces = ['P', 'H', 'B', 'R', 'Q', 'p', 'h', 'b', 'r', 'q']
+            chosen_pieces = ["K"]
+            for i in range(size*size - 1):
+                if(pieces > 0):
+                    chosen_pieces.append(possible_pieces[random.randint(0, len(possible_pieces)-1)])
+                    pieces = pieces - 1
+                else:
+                    chosen_pieces.append("-")
+            random.shuffle(chosen_pieces)
+
+            maptext = ""
+            for x in range(size):   
+                for y in range(size):
+                    maptext += chosen_pieces.pop()
+                maptext += "\n"
+            bm, bp = calculate_solutions(maptext, "./solutions/test_random.map", moves)
+            if(bm == moves):
+                print_level(maptext, "./solutions/solution_random.map", bp, bm)
+                successful = True
+        
+    else:
+            sys.exit()
